@@ -35,9 +35,7 @@ class Board:
             curr_node = curr_row.data.head
             row_str = ''
             while curr_node:
-                if curr_node.data is None:
-                    row_str += '|   |'
-                elif curr_node.data == "\U0001F47D\U0001F916":
+                if curr_node.data == "\U0001F47D\U0001F916":
                     row_str += f"|{curr_node.data}|"
                 else:
                     row_str += f"| {curr_node.data} |"
@@ -56,8 +54,8 @@ class Board:
         return board
 
     def add_symbols(self):
-        white_spaces = self.n * self.n - 2 * self.n
-        symbols = ['+'] * self.n + ['-'] * self.n + [' '] * white_spaces
+        white_spaces = self.n * self.n - 2 * self.n - self.n//2
+        symbols = ['+'] * self.n + ['-'] * self.n + ['#'] * (self.n // 2) + [' '] * white_spaces
 
         random.shuffle(symbols)
         curr_row = self.board.head
@@ -145,19 +143,17 @@ class Game:
 
     def move_predator(self):
         row, col = self.predator_pos
-        possible_moves = [(row-1, col), (row+1, col), (row, col-1), (row, col+1),
-                          (row-1, col-1), (row-1, col+1), (row+1, col-1), (row+1, col+1)]
+        jumps_quantity = random.choice([1, 2])
+        possible_moves = [(row-jumps_quantity, col), (row+jumps_quantity, col), (row, col-jumps_quantity), (row, col+jumps_quantity),
+                          (row-jumps_quantity, col-jumps_quantity), (row-jumps_quantity, col+jumps_quantity), (row+jumps_quantity, col-jumps_quantity), (row+jumps_quantity, col+jumps_quantity)]
         valid_moves = []
         for move in possible_moves:
             if self.board.is_valid_cell(move[0], move[1]):
                 valid_moves.append(move)
         if not valid_moves:
             return
+
         new_row, new_col = random.choice(valid_moves)
-        if self.board.get_cell_value(self.predator_pos[0], self.predator_pos[1]) == '\U0001F47D\U0001F916':
-            self.board.set_cell(self.predator_pos[0], self.predator_pos[1], '\U0001F47D')
-        else:
-            self.board.set_cell(self.predator_pos[0], self.predator_pos[1], None)
         cell_value = self.board.get_cell_value(new_row, new_col)
 
         if cell_value == '+':
@@ -170,6 +166,10 @@ class Game:
             self.board.set_cell(new_row, new_col, '\U0001F916')
             print('El Depredador se movió a una casilla con un "-". Su vida disminuyó a', self.predator_life)
 
+        elif cell_value == '#':
+            print('El Depredador intentó moverse a una celda bloqueada')
+            return
+
         elif cell_value == '\U0001F47D':
             self.alien_life -= 25
             self.board.set_cell(new_row, new_col, '\U0001F47D\U0001F916')
@@ -178,29 +178,36 @@ class Game:
         else:
             self.board.set_cell(new_row, new_col, '\U0001F916')
             print('El Depredador se movió a una casilla vacía.')
+
+        if self.board.get_cell_value(self.predator_pos[0], self.predator_pos[1]) == '\U0001F47D\U0001F916':
+            self.board.set_cell(self.predator_pos[0], self.predator_pos[1], '\U0001F47D')
+        else:
+            self.board.set_cell(self.predator_pos[0], self.predator_pos[1], ' ')
         self.predator_pos = (new_row, new_col)
 
     def move_alien(self):
         while True:
+            while True:
+                jumps_quantity = int(input("Ingrese la cantidad de espacios que quieres moverte (1 o 2): "))
+                if jumps_quantity in [1, 2]:
+                    break
+                print("Cantidad de espacios inválida. Intenta de nuevo.")
+
             direction = input('Ingrese la dirección en la que quiere mover al Alien (utilice WASD): ').lower()
             new_row, new_col = self.alien_pos
             if direction == 'w':
-                new_row -= 1
+                new_row -= jumps_quantity
             elif direction == 's':
-                new_row += 1
+                new_row += jumps_quantity
             elif direction == 'a':
-                new_col -= 1
+                new_col -= jumps_quantity
             elif direction == 'd':
-                new_col += 1
+                new_col += jumps_quantity
             else:
                 print('Dirección inválida. Intente de nuevo.')
                 continue
 
             if self.board.is_valid_cell(new_row, new_col):
-                if self.board.get_cell_value(self.alien_pos[0], self.alien_pos[1]) == '\U0001F47D\U0001F916':
-                    self.board.set_cell(self.alien_pos[0], self.alien_pos[1], '\U0001F916')
-                else:
-                    self.board.set_cell(self.alien_pos[0], self.alien_pos[1], None)
 
                 cell_value = self.board.get_cell_value(new_row, new_col)
                 if cell_value == '+':
@@ -213,6 +220,10 @@ class Game:
                     self.board.set_cell(new_row, new_col, '\U0001F47D')
                     print('El Alien se movió a una casilla con un "-". Su vida disminuyó a', self.alien_life)
 
+                elif cell_value == '#':
+                    print('El Alien intentó moverse a una celda bloqueada')
+                    return
+
                 elif cell_value == '\U0001F916':
                     self.alien_life -= 25
                     self.board.set_cell(new_row, new_col, '\U0001F47D\U0001F916')
@@ -221,6 +232,12 @@ class Game:
                 else:
                     self.board.set_cell(new_row, new_col, '\U0001F47D')
                     print('El Alien se movió a una casilla vacía.')
+
+                if self.board.get_cell_value(self.alien_pos[0], self.alien_pos[1]) == '\U0001F47D\U0001F916':
+                    self.board.set_cell(self.alien_pos[0], self.alien_pos[1], '\U0001F916')
+                else:
+                    self.board.set_cell(self.alien_pos[0], self.alien_pos[1], ' ')
+
                 self.alien_pos = (new_row, new_col)
                 return
             else:
@@ -228,7 +245,8 @@ class Game:
 
     def attack_predator(self):
         row, col = self.alien_pos
-        possible_attacks = [(row - 1, col), (row + 1, col), (row, col - 1), (row, col + 1)]
+        possible_attacks = [(row-1, col), (row+1, col), (row, col-1), (row, col+1),
+                          (row-1, col-1), (row-1, col+1), (row+1, col-1), (row+1, col+1)]
         for attack in possible_attacks:
             if self.board.is_valid_cell(attack[0], attack[1]) \
                     and self.board.get_cell_value(attack[0], attack[1]) == '\U0001F916':
